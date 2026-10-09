@@ -38,6 +38,30 @@ const searchRes = {
 const bulkRes = { items: [{ _id: "a", status: 201 }], errors: false, ack: "visible_for_search" };
 const job = { id: "j1", kind: "snapshot", state: "running", repository: "r", snapshot: "s" };
 
+describe("the engine is called native whatever the node calls it", () => {
+  // A node released before the rename reports `tantivy`. Each method that
+  // returns index metadata must translate it; this fails when one does not.
+  type Meta = { engine_binding: string };
+  const legacy = { ...meta, engine_binding: "tantivy" };
+  const cases: [string, (c: GnarlClient) => Promise<unknown>, unknown, (r: unknown) => unknown][] = [
+    ["createIndex", (c) => c.createIndex("places", schema), legacy, (r) => (r as Meta).engine_binding],
+    ["getIndex", (c) => c.getIndex("places"), legacy, (r) => (r as Meta).engine_binding],
+    ["listIndexesPage", (c) => c.listIndexesPage(), { indexes: [legacy] }, (r) => (r as { indexes: Meta[] }).indexes[0]?.engine_binding],
+  ];
+  for (const [name, run, body, pick] of cases) {
+    it(name, async () => {
+      const { fetch } = mockFetch(reply(body));
+      const c = new GnarlClient({ url: "https://node.test:9200", fetch });
+      expect(pick(await run(c))).toBe("native");
+    });
+  }
+  it("leaves lucene alone", async () => {
+    const { fetch } = mockFetch(reply({ ...meta, engine_binding: "lucene" }));
+    const c = new GnarlClient({ url: "https://node.test:9200", fetch });
+    expect((await c.getIndex("places")).engine_binding).toBe("lucene");
+  });
+});
+
 async function collect<T>(it: AsyncIterable<T>): Promise<T[]> {
   const out: T[] = [];
   for await (const x of it) out.push(x);

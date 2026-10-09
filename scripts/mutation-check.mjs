@@ -89,10 +89,18 @@ for (const m of methods(clientSrc, { pattern: "^  (?<prefix>async \\*|async |\\*
 
 const helpersPath = join(root, "src/helpers.ts");
 const helpersSrc = readFileSync(helpersPath, "utf8");
-for (const m of methods(helpersSrc, { pattern: "^export (?<prefix>async function\\*|function\\*|async function|function) (?<name>\\w+)(<[^>]*>)?\\([^)]*\\)[^{;]*\\{$" })) {
+for (const m of methods(helpersSrc, {
+  pattern: "^export (?<prefix>async function\\*|function\\*|async function|function) (?<name>\\w+)(<[^>]*>)?\\([^)]*\\)[^{;]*\\{$",
+})) {
   if (m.close < 0) continue;
   const noop = m.generator ? "{\n  return;\n" : "{\n  return undefined as never;\n";
-  targets.push({ file: helpersPath, src: helpersSrc, label: `helpers.${m.name}`, kind: "noop", apply: (s) => s.slice(0, m.open) + noop + s.slice(m.open + 2) });
+  targets.push({
+    file: helpersPath,
+    src: helpersSrc,
+    label: `helpers.${m.name}`,
+    kind: "noop",
+    apply: (s) => s.slice(0, m.open) + noop + s.slice(m.open + 2),
+  });
 }
 
 const selected = targets.filter((t) => !filter || t.label.toLowerCase().includes(filter.toLowerCase()));

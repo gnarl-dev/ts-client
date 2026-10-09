@@ -623,12 +623,14 @@ export class GnarlClient {
     if (!schema || typeof schema !== "object" || !("fields" in schema)) {
       throw new TypeError("gnarl: createIndex takes a schema, `{ fields: { … } }`");
     }
-    return this.#t.request("PUT", `/v1/indexes/${seg(name, "index name")}`, { ...base(opts), json: { schema } });
+    return this.#t
+      .request<IndexMetadata>("PUT", `/v1/indexes/${seg(name, "index name")}`, { ...base(opts), json: { schema } })
+      .then(publicEngine);
   }
 
   /** Index metadata: schema, engine binding, claim count. */
   getIndex(name: string, opts?: RequestOptions): Promise<IndexMetadata> {
-    return this.#t.request("GET", `/v1/indexes/${seg(name, "index name")}`, base(opts));
+    return this.#t.request<IndexMetadata>("GET", `/v1/indexes/${seg(name, "index name")}`, base(opts)).then(publicEngine);
   }
 
   /**
@@ -652,7 +654,12 @@ export class GnarlClient {
 
   /** One page of indexes. */
   listIndexesPage(opts?: ListOptions): Promise<IndexListResponse> {
-    return this.#t.request("GET", "/v1/indexes", { ...base(opts), query: { after: opts?.after, limit: opts?.limit } });
+    return this.#t
+      .request<IndexListResponse>("GET", "/v1/indexes", {
+        ...base(opts),
+        query: { after: opts?.after, limit: opts?.limit },
+      })
+      .then((page) => ({ ...page, indexes: page.indexes.map(publicEngine) }));
   }
 
   /**
@@ -880,4 +887,13 @@ export class GnarlClient {
   searchAfter<T = Doc>(index: string, request: SearchRequest, opts?: SearchOptions): AsyncGenerator<Hit<T>> {
     return walkSearchAfter((req) => this.search<T>(index, req, opts), request);
   }
+}
+
+/**
+ * Nodes released before the engine was named `native` report it by its old
+ * internal binding, `tantivy`. It is the same engine; the name is translated
+ * here so no caller ever sees two names for it, whichever node they talk to.
+ */
+function publicEngine(meta: IndexMetadata): IndexMetadata {
+  return (meta.engine_binding as string) === "tantivy" ? { ...meta, engine_binding: "native" } : meta;
 }
