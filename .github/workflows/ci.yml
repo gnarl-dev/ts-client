@@ -1,0 +1,191 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Nightly: the conformance job runs against the LATEST public release, so
+    # a node release that breaks this client turns this red without anyone
+    # touching the client.
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "gnarl-dev/releases tag to run conformance against (default: latest)"
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: lint + types + unit (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The test toolchain needs 20+; the package's own floor (18) is proven
+        # by `runtime-floor` below against the built output.
+        node: [20, 22, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - name: lint
+        run: npm run lint
+      - name: typecheck (library without Node types, then tests)
+        run: npm run typecheck
+      - name: typecheck the README's examples
+        run: npm run typecheck:readme
+      - name: unit
+        run: npm test
+      - name: build
+        run: npm run build
+      - name: package shape (publint + are-the-types-wrong)
+        run: npm run check:package
+      - name: smoke the built package (ESM and CJS)
+        run: npm run smoke
+      - if: matrix.node == 22
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 3
+
+  runtime-floor:
+    # `engines.node` says >=18. The dev toolchain will not run there, so this
+    # loads the BUILT package — through its exports map, as ESM and as CJS — on
+    # the floor itself.
+    name: runs on node 18
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - run: node scripts/smoke.mjs
+      - run: node scripts/smoke.cjs
+
+  generated:
+    # The generated types must be exactly what the vendored description
+    # produces. A hand-edit there is how a client silently stops matching the
+    # server.
+    name: generated types are in sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Regenerate and diff
+        run: |
+          set -euo pipefail
+          npm run generate
+          if ! git diff --exit-code -- src/generated/openapi.ts; then
+            echo "::error::src/generated/openapi.ts does not match spec/openapi.yaml. It is generated: run 'npm run generate' and commit the result."
+            exit 1
+          fi
+
+  can-read-upstream:
+    # The server's description lives in lucenia/lucenia, which is INTERNAL:
+    # this workflow's own token gets a 404 (not a 401) reading it. Reading it
+    # needs LUCENIA_RELEASE_TOKEN. A secret cannot be tested in a job-level
+    # `if`, so the check is its own job and the answer an output. The secret's
+    # value is never echoed.
+    name: upstream description readable?
+    runs-on: ubuntu-latest
+    outputs:
+      available: ${{ steps.check.outputs.available }}
+    steps:
+      - id: check
+        env:
+          TOKEN: ${{ secrets.LUCENIA_RELEASE_TOKEN }}
+        run: |
+          if [ -n "${TOKEN:-}" ]; then echo "available=true" >> "$GITHUB_OUTPUT"; else echo "available=false" >> "$GITHUB_OUTPUT"; fi
+
+  spec-freshness:
+    # The other half of `generated`: that job proves the client is consistent
+    # with its VENDORED description; this proves the vendored copy is the
+    # server's CURRENT one. A client can be self-consistent and stale.
+    name: vendored description is current
+    needs: can-read-upstream
+    if: needs.can-read-upstream.outputs.available == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Fetch the server's description
+        env:
+          GH_TOKEN: ${{ secrets.LUCENIA_RELEASE_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh api -H "Accept: application/vnd.github.raw" \
+            repos/lucenia/lucenia/contents/rust/api/openapi.yaml > "$RUNNER_TEMP/upstream.yaml"
+      - name: Byte-for-byte compare
+        run: node scripts/check-spec.mjs "$RUNNER_TEMP/upstream.yaml"
+
+  conformance:
+    # The layer that matters. Compiling proves the types match the
+    # description; only this proves the description matches the server.
+    name: conformance against the latest public release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Fetch a node from gnarl-dev/releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WANT: ${{ inputs.release }}
+        run: |
+          set -euo pipefail
+          tag="${WANT:-$(gh release view -R gnarl-dev/releases --json tagName -q .tagName)}"
+          echo "node release: $tag" | tee -a "$GITHUB_STEP_SUMMARY"
+          mkdir -p "$RUNNER_TEMP/node"
+          gh release download "$tag" -R gnarl-dev/releases \
+            --pattern 'gnarl-x86_64-unknown-linux-gnu.tar.gz' --dir "$RUNNER_TEMP/node"
+          tar xzf "$RUNNER_TEMP/node/gnarl-x86_64-unknown-linux-gnu.tar.gz" -C "$RUNNER_TEMP/node"
+          "$RUNNER_TEMP/node/gnarl" --version
+          # The native engine needs no JVM, so no Java is installed.
+          echo "LUCENIA_BIN=$RUNNER_TEMP/node/gnarl" >> "$GITHUB_ENV"
+      - name: Conformance and README examples
+        env:
+          # Fail, rather than skip, if the harness cannot find or boot the node.
+          GNARL_REQUIRE_NODE: "1"
+        run: npx vitest run --project conformance --reporter=default --reporter=junit --outputFile.junit=conformance.xml
+      - name: The suite actually ran
+        if: always()
+        run: |
+          set -euo pipefail
+          test -f conformance.xml || { echo "::error::no conformance report"; exit 1; }
+          node -e '
+            const x = require("fs").readFileSync("conformance.xml", "utf8");
+            const m = x.match(/<testsuites[^>]*tests="(\d+)"[^>]*/);
+            const tests = Number(m?.[1] ?? 0);
+            const skipped = [...x.matchAll(/<skipped/g)].length;
+            const ran = tests - skipped;
+            console.log(`${ran} conformance tests executed (${skipped} skipped)`);
+            if (ran < 50) { console.error("too few conformance tests executed — a run that skips passes without proving anything"); process.exit(1); }
+          ' | tee -a "$GITHUB_STEP_SUMMARY"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: conformance-report
+          path: conformance.xml
+          retention-days: 14

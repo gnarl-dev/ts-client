@@ -1,0 +1,9 @@
+{
+  // The library alone, with NO Node types: anything that compiles only because
+  // @types/node is around would break in a browser or an edge runtime.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": []
+  },
+  "include": ["src"]
+}

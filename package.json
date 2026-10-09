@@ -1,0 +1,83 @@
+{
+  "name": "@gnarl/client",
+  "version": "0.1.0",
+  "description": "TypeScript/JavaScript client for Gnarl, a decentralized search fabric",
+  "license": "Apache-2.0",
+  "author": "Lucenia",
+  "homepage": "https://gnarl.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gnarl-dev/ts-client.git"
+  },
+  "bugs": {
+    "url": "https://github.com/gnarl-dev/ts-client/issues"
+  },
+  "keywords": [
+    "gnarl",
+    "search",
+    "decentralized",
+    "vector-search",
+    "agent-memory",
+    "geospatial",
+    "p2p"
+  ],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./openapi.yaml": "./spec/openapi.yaml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "spec/openapi.yaml",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "generate": "openapi-typescript spec/openapi.yaml --default-non-nullable false --output src/generated/openapi.ts",
+    "check:generated": "npm run generate && git diff --exit-code -- src/generated/openapi.ts",
+    "check:spec": "node scripts/check-spec.mjs",
+    "build": "tsup",
+    "typecheck": "tsc --noEmit -p tsconfig.build.json && tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test": "vitest run --project unit",
+    "test:conformance": "vitest run --project conformance",
+    "test:all": "vitest run",
+    "check:package": "publint && attw --pack . --exclude-entrypoints ./openapi.yaml",
+    "smoke": "node scripts/smoke.mjs && node scripts/smoke.cjs",
+    "prepublishOnly": "npm run lint && npm run typecheck && npm test && npm run build && npm run check:package",
+    "typecheck:readme": "node scripts/readme-snippets.mjs && tsc --noEmit -p tsconfig.readme.json",
+    "mutation": "node scripts/mutation-check.mjs"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@biomejs/biome": "2.5.15",
+    "@types/node": "22.20.5",
+    "openapi-typescript": "7.13.0",
+    "publint": "0.3.25",
+    "tsup": "8.5.1",
+    "typescript": "5.9.3",
+    "undici": "7.30.0",
+    "vitest": "4.1.11"
+  }
+}

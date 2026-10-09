@@ -1,0 +1,9 @@
+{
+  // The README's examples, checked against the real declarations.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "noUncheckedIndexedAccess": true
+  },
+  "include": ["build/readme-snippets"]
+}
