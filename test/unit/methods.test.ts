@@ -47,6 +47,12 @@ describe("the engine is called native whatever the node calls it", () => {
     ["createIndex", (c) => c.createIndex("places", schema), legacy, (r) => (r as Meta).engine_binding],
     ["getIndex", (c) => c.getIndex("places"), legacy, (r) => (r as Meta).engine_binding],
     ["listIndexesPage", (c) => c.listIndexesPage(), { indexes: [legacy] }, (r) => (r as { indexes: Meta[] }).indexes[0]?.engine_binding],
+    [
+      "memory.remember",
+      (c) => c.memory.remember({ content: "x" }),
+      { id: "m1", namespace: "default", user: "u", embedder: "e", engine_binding: "tantivy" },
+      (r) => (r as Meta).engine_binding,
+    ],
   ];
   for (const [name, run, body, pick] of cases) {
     it(name, async () => {

@@ -278,7 +278,9 @@ export class MemoryApi {
    * fast with an error naming where to install it.
    */
   remember(request: RememberRequest, opts?: RequestOptions): Promise<RememberResponse> {
-    return this.t.request("POST", "/v1/memory/remember", { ...base(opts), json: request, idempotent: false });
+    return this.t
+      .request<RememberResponse>("POST", "/v1/memory/remember", { ...base(opts), json: request, idempotent: false })
+      .then(publicEngine);
   }
 
   /** Recall memories ranked by fused lexical + vector score. `k` above 100 is clamped to 100. */
@@ -894,6 +896,6 @@ export class GnarlClient {
  * internal binding, `tantivy`. It is the same engine; the name is translated
  * here so no caller ever sees two names for it, whichever node they talk to.
  */
-function publicEngine(meta: IndexMetadata): IndexMetadata {
+function publicEngine<T extends { engine_binding?: string | null }>(meta: T): T {
   return (meta.engine_binding as string) === "tantivy" ? { ...meta, engine_binding: "native" } : meta;
 }
