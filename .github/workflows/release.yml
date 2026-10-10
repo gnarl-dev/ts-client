@@ -1,9 +1,9 @@
 # Publishes gnarl-client to npm when a v* tag is pushed, with provenance.
 #
-# npm trusts this workflow by name (trusted publishing), so no token is
-# needed once the package exists. The very first publish of a new package
-# cannot use it: set an NPM_TOKEN secret for that one release, then remove it
-# and register this workflow as the package's trusted publisher.
+# npm trusts this workflow by name (trusted publishing, OIDC): no token exists
+# anywhere. The package's npm settings name gnarl-dev/ts-client, release.yml and
+# environment `npm` as its trusted publisher, and disallow token publishing, so
+# a leaked token could not publish even if one were created.
 name: release
 
 on:
@@ -39,5 +39,3 @@ jobs:
       - run: npm ci
       # prepublishOnly runs lint, typecheck, tests, build and the package check.
       - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
