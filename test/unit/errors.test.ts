@@ -158,7 +158,7 @@ describe("GnarlError.is", () => {
 
   it("recognises an error from another copy of the class (the dual-package hazard)", () => {
     const foreign = new Error("from the other build");
-    Object.defineProperty(foreign, Symbol.for("@gnarl/client.GnarlError"), { value: true });
+    Object.defineProperty(foreign, Symbol.for("gnarl-client.GnarlError"), { value: true });
     expect(GnarlError.is(foreign)).toBe(true);
   });
 });

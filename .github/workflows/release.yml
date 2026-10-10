@@ -1,4 +1,4 @@
-# Publishes @gnarl/client to npm when a v* tag is pushed, with provenance.
+# Publishes gnarl-client to npm when a v* tag is pushed, with provenance.
 #
 # npm trusts this workflow by name (trusted publishing), so no token is
 # needed once the package exists. The very first publish of a new package

@@ -1,6 +1,6 @@
 // The CommonJS half of smoke.mjs: `require` resolves the CJS build.
 const assert = require("node:assert/strict");
-const { GnarlClient, NotFoundError, GnarlError } = require("@gnarl/client");
+const { GnarlClient, NotFoundError, GnarlError } = require("gnarl-client");
 
 const client = new GnarlClient({
   url: "https://node.test",
