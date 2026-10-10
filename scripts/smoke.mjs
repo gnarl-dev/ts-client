@@ -2,7 +2,7 @@
 // runs this — CI runs it on 18, the floor the package claims. No node needed:
 // the request goes to a stub fetch.
 import assert from "node:assert/strict";
-import { GnarlClient, GnarlError, NotFoundError, VERSION } from "@gnarl/client";
+import { GnarlClient, GnarlError, NotFoundError, VERSION } from "gnarl-client";
 
 let seen;
 const client = new GnarlClient({

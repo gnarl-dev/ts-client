@@ -7,7 +7,7 @@ A node is a peer, not a coordinator, so there is no cluster endpoint to point
 at. You talk to a node and it answers for the mesh. Any node will do.
 
 ```bash
-npm install @gnarl/client
+npm install gnarl-client
 ```
 
 Zero runtime dependencies. It runs wherever there is a WHATWG `fetch`: Node 18+,
@@ -27,7 +27,7 @@ gnarl start          # https://localhost:8080, self-signed certificate
 Then, from Node:
 
 ```ts
-import { GnarlClient } from "@gnarl/client";
+import { GnarlClient } from "gnarl-client";
 import { Agent, fetch } from "undici"; // only to accept a LOCAL node's self-signed certificate
 
 const localNode = new Agent({ connect: { rejectUnauthorized: false } });
@@ -120,7 +120,7 @@ maps to a subclass:
 | `ConnectionError` | no response at all — refused, TLS, DNS, `timeoutMs` (`status` is 0) |
 
 ```ts
-import { AlreadyExistsError, GnarlClient, NotFoundError, ValidationError } from "@gnarl/client";
+import { AlreadyExistsError, GnarlClient, NotFoundError, ValidationError } from "gnarl-client";
 
 const gnarl = new GnarlClient();
 try {
@@ -167,7 +167,7 @@ recall, answer) and writes that name their `_id` or carry an
 nor is a streamed body.
 
 ```ts
-import { GnarlClient } from "@gnarl/client";
+import { GnarlClient } from "gnarl-client";
 
 const patient = new GnarlClient({ retry: { retries: 5, maxDelayMs: 30_000 } });
 const strict = new GnarlClient({ retry: false, timeoutMs: 5_000 });
@@ -187,7 +187,7 @@ vector score, and `answer` composes over what it recalled. Scope memories with
 and remembers what it learned after:
 
 ```ts
-import { GnarlClient } from "@gnarl/client";
+import { GnarlClient } from "gnarl-client";
 
 const gnarl = new GnarlClient();
 
@@ -227,7 +227,7 @@ The request and response types are generated from the API description, so an
 editor completes the query DSL:
 
 ```ts
-import { GnarlClient } from "@gnarl/client";
+import { GnarlClient } from "gnarl-client";
 
 interface Place {
   name: string;
@@ -255,7 +255,7 @@ Deep result sets: walk them with `search_after`, which costs the same per page
 however deep it goes. It needs an explicit `sort`:
 
 ```ts
-import { GnarlClient } from "@gnarl/client";
+import { GnarlClient } from "gnarl-client";
 
 const gnarl = new GnarlClient();
 let n = 0;
@@ -275,7 +275,7 @@ could reach. Every response carries `coverage`. For anything auditable, ask
 for all or nothing:
 
 ```ts
-import { GnarlClient, IncompleteResultError } from "@gnarl/client";
+import { GnarlClient, IncompleteResultError } from "gnarl-client";
 
 const gnarl = new GnarlClient();
 try {
@@ -300,7 +300,7 @@ way to lose writes silently. `failedItems` makes the check a one-liner, and
 items are in request order, so an item's index is its document's:
 
 ```ts
-import { failedItems, GnarlClient } from "@gnarl/client";
+import { failedItems, GnarlClient } from "gnarl-client";
 
 const gnarl = new GnarlClient();
 const result = await gnarl.bulk("places", [
@@ -316,7 +316,7 @@ iterable or async iterable and yields each chunk's response with its
 encoded lazily, which the node ingests in micro-batches as it arrives:
 
 ```ts
-import { failedItems, GnarlClient } from "@gnarl/client";
+import { failedItems, GnarlClient } from "gnarl-client";
 
 const gnarl = new GnarlClient();
 function* towns() {
@@ -338,7 +338,7 @@ write creates it, and every search is confined to it by a filter the caller
 cannot override.
 
 ```ts
-import { GnarlClient } from "@gnarl/client";
+import { GnarlClient } from "gnarl-client";
 
 const gnarl = new GnarlClient();
 await gnarl.namespaces.indexDocument("tenant-a", { subject: "Q3 board pack" }, { id: "doc-1", waitFor: "visible" });
@@ -361,7 +361,7 @@ index or a namespace, and restore. Snapshot, restore and cleanup are jobs:
 
 <!-- doctest: skip because it writes to a host directory -->
 ```ts
-import { GnarlClient } from "@gnarl/client";
+import { GnarlClient } from "gnarl-client";
 
 const gnarl = new GnarlClient();
 await gnarl.snapshots.registerRepository("nightly", { type: "fs", location: "/var/backups/gnarl" });
@@ -416,7 +416,7 @@ node needs no token. A remote one does:
 
 <!-- doctest: skip because it needs a remote node and a token -->
 ```ts
-import { GnarlClient } from "@gnarl/client";
+import { GnarlClient } from "gnarl-client";
 
 const gnarl = new GnarlClient({ url: "https://node.example.com", token: process.env.GNARL_TOKEN });
 ```
@@ -438,7 +438,7 @@ npm run generate
 with a default (`from`, `size`, …) becomes *required*. CI regenerates and fails
 if the output differs, and fails if `spec/openapi.yaml` is not the server's
 current description. The description also ships in the package, as
-`@gnarl/client/openapi.yaml`.
+`gnarl-client/openapi.yaml`.
 
 Where the description and the server disagree, the client sends what the
 server reads, says so in the method's documentation, and the gap is reported

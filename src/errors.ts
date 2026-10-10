@@ -20,7 +20,7 @@
 
 import type { ErrorType } from "./types.js";
 
-const BRAND = Symbol.for("@gnarl/client.GnarlError");
+const BRAND = Symbol.for("gnarl-client.GnarlError");
 
 export interface GnarlErrorInit {
   /** The wire `error.type`, or `""` when the body carried none. */

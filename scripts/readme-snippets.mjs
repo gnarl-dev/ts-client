@@ -37,7 +37,7 @@ export function writeSnippets(outDir) {
   const files = [];
   for (const [n, s] of readmeSnippets().entries()) {
     const file = join(outDir, `${String(n).padStart(2, "0")}-line${s.line}.ts`);
-    const code = s.code.replaceAll('from "@gnarl/client"', `from "${entry.startsWith(".") ? entry : `./${entry}`}"`);
+    const code = s.code.replaceAll('from "gnarl-client"', `from "${entry.startsWith(".") ? entry : `./${entry}`}"`);
     // `export {}` makes every snippet a module, so top-level await and
     // same-named consts in different snippets are both fine.
     writeFileSync(file, `// README.md line ${s.line}\n${code}\nexport {};\n`);

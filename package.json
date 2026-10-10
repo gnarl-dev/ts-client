@@ -1,5 +1,5 @@
 {
-  "name": "@gnarl/client",
+  "name": "gnarl-client",
   "version": "0.1.0",
   "description": "TypeScript/JavaScript client for Gnarl, a decentralized search fabric",
   "license": "Apache-2.0",

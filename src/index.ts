@@ -1,5 +1,5 @@
 /**
- * @gnarl/client — the TypeScript/JavaScript client for Gnarl.
+ * gnarl-client — the TypeScript/JavaScript client for Gnarl.
  *
  * Zero runtime dependencies; runs anywhere with a WHATWG `fetch`.
  */
