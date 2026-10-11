@@ -1,7 +1,7 @@
 /**
  * Finds a node for the conformance suite, in this order:
  *
- * 1. `$GNARL_TEST_NODE` — a node you already run (e.g. https://127.0.0.1:8080).
+ * 1. `$GNARL_TEST_NODE` — a node you already run (e.g. http://127.0.0.1:PORT).
  * 2. `$LUCENIA_BIN` / `$GNARL_BIN` — a binary this starts and stops itself.
  * 3. the newer of the sibling lucenia checkout's `rust/target/{release,debug}/lucenia`.
  *

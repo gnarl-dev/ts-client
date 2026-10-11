@@ -94,7 +94,7 @@ describe.skipIf(noNode)("connection failures", () => {
     expect(err.type).toBe("connection_error");
   });
 
-  it("https with the default fetch refuses the self-signed certificate", async () => {
+  it.skipIf(nodeUrl.startsWith("http:"))("https with the default fetch refuses the self-signed certificate", async () => {
     // The protection is on unless the caller turns it off for one node.
     const strict = new GnarlClient({ url: nodeUrl, timeoutMs: 5000, retry: false });
     const err = (await strict.ping().catch((e) => e)) as GnarlError;

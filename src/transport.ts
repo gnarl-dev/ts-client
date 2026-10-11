@@ -3,6 +3,7 @@
  * invite one, and error mapping. Nothing here knows about any route.
  */
 
+import { discoverLocalUrl, LOCAL_DEFAULT_URL } from "./discover.js";
 import { ConnectionError, errorFromResponse, GnarlError } from "./errors.js";
 import { VERSION } from "./version.js";
 
@@ -54,8 +55,11 @@ export interface RetryOptions {
 
 export interface ClientOptions {
   /**
-   * The node's base URL. Default: `$GNARL_URL`, else `https://localhost:8080`.
-   * A scheme-less address becomes https, never http.
+   * The node's base URL. When omitted: `$GNARL_URL`, else the endpoint the
+   * node on this machine recorded (`$LUCENIA_DATA_DIR/runtime/endpoint.json`,
+   * then `~/.lucenia/runtime/endpoint.json`; Node only), else
+   * `http://127.0.0.1:43300` — the Gnarly app. A scheme-less address becomes
+   * https, never http.
    */
   url?: string;
   /** Capability token, sent as `Authorization: Bearer …`. Default: `$GNARL_TOKEN`. */
@@ -94,8 +98,6 @@ export interface RawRequest extends RequestOptions {
    */
   idempotent?: boolean;
 }
-
-const DEFAULT_URL = "https://localhost:8080";
 
 function readEnv(name: string): string | undefined {
   try {
@@ -185,7 +187,7 @@ export class Transport {
   random: () => number = Math.random;
 
   constructor(options: ClientOptions = {}) {
-    this.baseUrl = normalizeBaseUrl(options.url ?? readEnv("GNARL_URL") ?? DEFAULT_URL);
+    this.baseUrl = normalizeBaseUrl(options.url ?? readEnv("GNARL_URL") ?? discoverLocalUrl() ?? LOCAL_DEFAULT_URL);
     this.#token = options.token ?? readEnv("GNARL_TOKEN");
     const f = options.fetch ?? (globalThis as { fetch?: FetchLike }).fetch;
     if (typeof f !== "function") {

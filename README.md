@@ -16,25 +16,17 @@ declarations.
 
 ## Quick start
 
-Start a node — download `gnarl` for your platform from
-[github.com/gnarl-dev/releases](https://github.com/gnarl-dev/releases) and run:
-
-<!-- doctest: skip because it is a shell command -->
-```bash
-gnarl start          # https://localhost:8080, self-signed certificate
-```
-
-Then, from Node:
+Run the [Gnarly app](https://gnarl.dev), or start a node yourself — download
+`gnarl` for your platform from
+[github.com/gnarl-dev/releases](https://github.com/gnarl-dev/releases) and run
+`gnarl start` (see [Connecting](#connecting) for its certificate). Then, from
+Node:
 
 ```ts
 import { GnarlClient } from "gnarl-client";
-import { Agent, fetch } from "undici"; // only to accept a LOCAL node's self-signed certificate
 
-const localNode = new Agent({ connect: { rejectUnauthorized: false } });
-const gnarl = new GnarlClient({
-  // url defaults to $GNARL_URL, then https://localhost:8080
-  fetch: (url, init) => fetch(url, { ...init, dispatcher: localNode }),
-});
+// No URL: $GNARL_URL, else the node on this machine — see "finds the Gnarly app" below.
+const gnarl = new GnarlClient();
 
 await gnarl.createIndex("places", {
   fields: {
@@ -69,37 +61,66 @@ That is the whole loop: create, write, search, remember, recall.
 
 ## Connecting
 
-**A node serves TLS by default.** `gnarl start` listens on **8080** over
-**https**, using a self-signed certificate it generates on first run. Nothing
-signed that certificate, so a client cannot verify it — which is right for a
-node **you started yourself** and wrong for anything else. Accept it only for
-that node, and never by habit: a client that skips verification will talk to
-whoever answers the address.
+### `new GnarlClient()` finds the Gnarly app on this machine
+
+With no `url`, the client looks, in order, at:
+
+1. `$GNARL_URL`;
+2. the address the node on this machine recorded when it started, in
+   `$LUCENIA_DATA_DIR/runtime/endpoint.json`, then
+   `~/.lucenia/runtime/endpoint.json` — the same lookup the `gnarl` CLI makes;
+3. `http://127.0.0.1:43300`, where the Gnarly desktop app listens.
+
+The Gnarly app serves **plain HTTP on loopback**, so against it
+`new GnarlClient()` just works. The recorded address is a hint, read once
+when the client is built: plain HTTP is taken from it only for a loopback
+host, so it can never send a request off this machine unencrypted, and an
+explicit `url` (or `$GNARL_URL`) always wins. Files are read only under Node
+(and Bun); in a browser or an edge worker, step 2 finds nothing and the
+default applies — pass `url` there.
+
+### A node you started with `gnarl start`
+
+`gnarl start` also listens on **43300**, but over **https**, using a
+self-signed certificate it generates on first run. Nothing signed that
+certificate, so a client cannot verify it — which is right for a node **you
+started yourself** and wrong for anything else. The client never turns
+verification off on its own, not even on loopback: accept the certificate only
+for that node, and never by habit, because a client that skips verification
+will talk to whoever answers the address.
+
+```ts
+import { GnarlClient } from "gnarl-client";
+import { Agent, fetch } from "undici"; // only to accept a LOCAL node's self-signed certificate
+
+const localNode = new Agent({ connect: { rejectUnauthorized: false } });
+const mine = new GnarlClient({
+  fetch: (url, init) => fetch(url, { ...init, dispatcher: localNode }),
+});
+await mine.ping();
+```
 
 | Where the node is | What to pass |
 |---|---|
-| A deployment with a real certificate | nothing — `new GnarlClient({ url: "https://search.example.com" })` |
-| `gnarl start` on your machine, from **Node** | the undici `Agent` shown in the quick start |
+| The **Gnarly desktop app**, or a node started with `--no-tls` | nothing — `new GnarlClient()` |
+| A deployment with a real certificate | `new GnarlClient({ url: "https://search.example.com" })` |
+| `gnarl start` on your machine, from **Node** | the undici `Agent` above |
 | … from **Bun** | `fetch: (u, i) => fetch(u, { ...i, tls: { rejectUnauthorized: false } })` |
 | … from **Deno** | `fetch: (u, i) => fetch(u, { ...i, client: Deno.createHttpClient({ caCerts: [pem] }) })`, or run with `--unsafely-ignore-certificate-errors=localhost` |
-| … from a **browser** | open `https://localhost:8080` once and accept the certificate, or run the node with `--no-tls` |
-| The **desktop app**, or a node started with `--no-tls` | `url: "http://localhost:8080"` — plain HTTP on loopback |
+| … from a **browser** | open `https://localhost:43300` once and accept the certificate, or run the node with `--no-tls` |
 
 The address and token default from the environment when `process.env`
 exists, so the same code runs against a laptop and a deployment:
 
 <!-- doctest: skip because it is a shell command -->
 ```bash
-GNARL_URL=http://localhost:8080 node app.js           # desktop node
+node app.js                                           # the Gnarly app on this machine
 GNARL_URL=https://node.example.com GNARL_TOKEN=… node app.js
 ```
 
 An address with no scheme becomes **https**, so `search.example.com` is never
 silently downgraded to plaintext. A path prefix is kept, for a node behind a
 reverse proxy.
-
-The remaining examples build `new GnarlClient()` to stay self-contained; with a
-self-signed local node, pass the `fetch` from the quick start.
 
 ## Errors
 
@@ -470,7 +491,7 @@ upstream:
 npm test                                            # unit
 npm run test:conformance                            # starts a node from ../lucenia, or skips
 LUCENIA_BIN=/path/to/gnarl npm run test:conformance # a binary of your choosing
-GNARL_TEST_NODE=https://127.0.0.1:8080 npm run test:conformance  # a node you already run
+GNARL_TEST_NODE=http://127.0.0.1:PORT npm run test:conformance  # a throwaway node you already run
 ```
 
 A table in `test/unit/methods.test.ts` lists every public method; a test

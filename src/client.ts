@@ -285,7 +285,9 @@ export class MemoryApi {
 
   /** Recall memories ranked by fused lexical + vector score. `k` above 100 is clamped to 100. */
   recall(request: RecallRequest, opts?: RequestOptions): Promise<RecallResponse> {
-    return this.t.request("POST", "/v1/memory/recall", { ...base(opts), json: request, idempotent: true });
+    return this.t
+      .request<RecallResponse>("POST", "/v1/memory/recall", { ...base(opts), json: request, idempotent: true })
+      .then(withEmbedder);
   }
 
   /** Answer a question over recalled memories. */
@@ -542,8 +544,8 @@ export class SnapshotsApi {
  * A client for one Gnarl node.
  *
  * ```ts
- * const gnarl = new GnarlClient();                       // $GNARL_URL or https://localhost:8080
- * const gnarl = new GnarlClient({ url: "http://localhost:8080" }); // a --no-tls / desktop node
+ * const gnarl = new GnarlClient();                       // $GNARL_URL, else the node on this machine
+ * const gnarl = new GnarlClient({ url: "https://node.example.com" }); // a node elsewhere
  * ```
  */
 export class GnarlClient {
@@ -898,4 +900,14 @@ export class GnarlClient {
  */
 function publicEngine<T extends { engine_binding?: string | null }>(meta: T): T {
   return (meta.engine_binding as string) === "tantivy" ? { ...meta, engine_binding: "native" } : meta;
+}
+
+/**
+ * Nodes up to 0.1.0-rc29 answer a recall over a namespace nothing was ever
+ * written to with `{namespace, count: 0, memories: []}` — no `embedder`, which
+ * the contract declares required. The field is filled with `""` ("the node did
+ * not say") so the type stays true at run time, whichever node answered.
+ */
+function withEmbedder(res: RecallResponse): RecallResponse {
+  return typeof res?.embedder === "string" ? res : { ...res, embedder: "" };
 }
