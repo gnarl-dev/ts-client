@@ -544,8 +544,8 @@ export class SnapshotsApi {
  * A client for one Gnarl node.
  *
  * ```ts
- * const gnarl = new GnarlClient();                       // $GNARL_URL or https://localhost:8080
- * const gnarl = new GnarlClient({ url: "http://localhost:8080" }); // a --no-tls / desktop node
+ * const gnarl = new GnarlClient();                       // $GNARL_URL, else the node on this machine
+ * const gnarl = new GnarlClient({ url: "https://node.example.com" }); // a node elsewhere
  * ```
  */
 export class GnarlClient {

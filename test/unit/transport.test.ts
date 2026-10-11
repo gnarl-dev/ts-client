@@ -39,10 +39,10 @@ function transport(fetch: ReturnType<typeof mockFetch>["fetch"], retry?: ClientO
 describe("base URL", () => {
   it("adds https to a scheme-less address, never http", () => {
     expect(normalizeBaseUrl("search.example.com")).toBe("https://search.example.com");
-    expect(normalizeBaseUrl("localhost:8080")).toBe("https://localhost:8080");
+    expect(normalizeBaseUrl("localhost:43300")).toBe("https://localhost:43300");
   });
   it("keeps an explicit http (a --no-tls or desktop node)", () => {
-    expect(normalizeBaseUrl("http://localhost:8080/")).toBe("http://localhost:8080");
+    expect(normalizeBaseUrl("http://localhost:43300/")).toBe("http://localhost:43300");
   });
   it("keeps a path prefix for a node behind a reverse proxy", () => {
     expect(normalizeBaseUrl("https://proxy.test/gnarl/")).toBe("https://proxy.test/gnarl");
@@ -57,11 +57,14 @@ describe("base URL", () => {
 describe("defaults", () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  it("uses https://localhost:8080 with no option and no environment", () => {
+  it("uses the Gnarly app's http://127.0.0.1:43300 with no option, environment or endpoint file", () => {
     vi.stubEnv("GNARL_URL", "");
     vi.stubEnv("GNARL_TOKEN", "");
+    vi.stubEnv("LUCENIA_DATA_DIR", "");
+    vi.stubEnv("HOME", "/nonexistent-gnarl-home");
+    vi.stubEnv("USERPROFILE", "/nonexistent-gnarl-home");
     const c = new GnarlClient({ fetch: mockFetch().fetch });
-    expect(c.url).toBe("https://localhost:8080");
+    expect(c.url).toBe("http://127.0.0.1:43300");
   });
 
   it("reads GNARL_URL and GNARL_TOKEN", async () => {
