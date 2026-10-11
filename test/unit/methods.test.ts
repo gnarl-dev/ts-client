@@ -68,6 +68,22 @@ describe("the engine is called native whatever the node calls it", () => {
   });
 });
 
+describe("recall on a namespace nothing was written to", () => {
+  // Nodes up to 0.1.0-rc29 omit `embedder` from the empty answer, though the
+  // contract declares it required. The client fills it so the type holds.
+  it("still carries an embedder string", async () => {
+    const { fetch } = mockFetch(reply({ namespace: "never-written", count: 0, memories: [] }));
+    const c = new GnarlClient({ url: "https://node.test:9200", fetch });
+    const r = await c.memory.recall({ query: "anything", namespace: "never-written" });
+    expect(r).toEqual({ namespace: "never-written", count: 0, memories: [], embedder: "" });
+  });
+  it("keeps the embedder a node reports", async () => {
+    const { fetch } = mockFetch(reply({ namespace: "n", count: 0, memories: [], embedder: "local_minilm" }));
+    const c = new GnarlClient({ url: "https://node.test:9200", fetch });
+    expect((await c.memory.recall({ query: "q" })).embedder).toBe("local_minilm");
+  });
+});
+
 async function collect<T>(it: AsyncIterable<T>): Promise<T[]> {
   const out: T[] = [];
   for await (const x of it) out.push(x);

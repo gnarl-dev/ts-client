@@ -36,6 +36,15 @@ describe.skipIf(noNode)("memory", () => {
     expect(stranger.memories.some((m) => m.id === stored.id)).toBe(false);
   });
 
+  it("recall on a namespace nothing was written to is an empty answer, not an error", async () => {
+    const namespace = uniqueName("never-written");
+    const r = await c.memory.recall({ query: "is anything here?", namespace });
+    expect(r.count).toBe(0);
+    expect(r.memories).toEqual([]);
+    // Older nodes omit it on this path; the client fills it in either way.
+    expect(typeof r.embedder).toBe("string");
+  });
+
   it("answer composes over recalled memories", async () => {
     const content = `${user} keeps the spare office key in the blue drawer`;
     const stored = await c.memory.remember({ content, user });
